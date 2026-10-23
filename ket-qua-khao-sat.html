@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kết quả khảo sát và nhận xét theo tuần</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --surface: #ffffff; --text: #1d2433; --muted: #6b7280;
+    --line: #e5e7eb; --accent: #2563eb; --up: #15803d; --down: #b91c1c; --flat: #6b7280;
+    --bar: #93c5fd; --bar-strong: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1419; --surface: #1a2230; --text: #e6eaf2; --muted: #9aa4b2;
+      --line: #2d3748; --accent: #60a5fa; --up: #4ade80; --down: #f87171; --flat: #9aa4b2;
+      --bar: #1e3a8a; --bar-strong: #60a5fa;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1419; --surface: #1a2230; --text: #e6eaf2; --muted: #9aa4b2;
+    --line: #2d3748; --accent: #60a5fa; --up: #4ade80; --down: #f87171; --flat: #9aa4b2;
+    --bar: #1e3a8a; --bar-strong: #60a5fa;
+  }
+  * { box-sizing: border-box; }
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+  h2 { font-size: 1.1rem; margin: 28px 0 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  }
+  .card .label { color: var(--muted); font-size: .85rem; }
+  .card .value { font-size: 1.6rem; font-weight: 700; margin-top: 2px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+    overflow-x: auto;
+  }
+  .weeks { display: grid; grid-template-columns: repeat(8, minmax(64px, 1fr)); gap: 10px; align-items: end; height: 200px; min-width: 560px; }
+  .col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .bar { width: 70%; background: var(--bar); border-radius: 6px 6px 0 0; position: relative; }
+  .bar.strong { background: var(--bar-strong); }
+  .bar span { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-size: .8rem; font-weight: 600; }
+  .col .name { margin-top: 6px; font-size: .8rem; color: var(--muted); text-align: center; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 8px 0 12px; }
+  input, select {
+    font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text);
+  }
+  input { flex: 1; min-width: 180px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 12px; overflow: hidden; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: center; font-size: .92rem; white-space: nowrap; }
+  th { background: var(--bg); font-weight: 600; cursor: pointer; user-select: none; }
+  td:first-child, th:first-child { text-align: left; font-weight: 600; }
+  .up { color: var(--up); font-weight: 600; }
+  .down { color: var(--down); font-weight: 600; }
+  .flat { color: var(--flat); }
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-top: 10px; }
+  details summary { cursor: pointer; font-weight: 600; }
+  .note { font-size: .92rem; margin: 8px 0; }
+  .note b { color: var(--text); }
+  .foot { color: var(--muted); font-size: .82rem; margin-top: 24px; }
+  .toggle { margin-left: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="controls" style="margin-top:0">
+    <h1 style="margin:0">Kết quả khảo sát và nhận xét theo tuần</h1>
+    <button class="toggle" id="themeBtn" type="button" style="font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer">Đổi giao diện</button>
+  </div>
+  <p class="sub">Lớp: 30 học sinh · 6 tuần khảo sát · Thang điểm 10 · Học sinh được ghi theo mã (HS01–HS30)</p>
+
+  <div class="cards" id="cards"></div>
+
+  <h2>Điểm trung bình theo tuần</h2>
+  <div class="panel">
+    <div class="weeks" id="weekChart"></div>
+  </div>
+
+  <h2>Danh sách học sinh</h2>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Tìm theo mã, ví dụ HS07">
+    <select id="filter">
+      <option value="all">Tất cả</option>
+      <option value="up">Tiến bộ sau khảo sát</option>
+      <option value="flat">Giữ nguyên</option>
+      <option value="down">Giảm</option>
+      <option value="low">Dưới 5 điểm ban đầu</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-key="code">Mã HS</th>
+          <th data-key="w1">T1</th><th data-key="w2">T2</th><th data-key="w3">T3</th>
+          <th data-key="w4">T4</th><th data-key="w5">T5</th><th data-key="w6">T6</th>
+          <th data-key="pre">Trước</th><th data-key="post">Sau</th><th data-key="diff">Chênh lệch</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <h2>Nhận xét chi tiết</h2>
+  <p class="sub" style="margin-top:-6px">Chọn một học sinh để xem nhận xét từng tuần.</p>
+  <div class="controls">
+    <select id="pick"></select>
+  </div>
+  <div id="detail" class="panel"></div>
+
+  <p class="foot">Trang chỉ hiển thị mã học sinh. Dữ liệu được nhập từ file khảo sát; không lưu lại trên máy chủ.</p>
+</div>
+
+<script>
+const DATA = [
+  { code: "HS01", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS02", w: [4,4,5,5,5,6], pre: 4, post: 6 },
+  { code: "HS03", w: [6,7,7,7,7,7], pre: 6, post: 7 },
+  { code: "HS04", w: [10,10,10,9,10,10], pre: 10, post: 10 },
+  { code: "HS05", w: [1,1,1,1,1,1], pre: 1, post: 1 },
+  { code: "HS06", w: [7,7,7,6,7,7], pre: 7, post: 7 },
+  { code: "HS07", w: [3,5,6,6,6,6], pre: 3, post: 6 },
+  { code: "HS08", w: [2,4,6,6,6,6], pre: 2, post: 6 },
+  { code: "HS09", w: [10,10,10,9,10,10], pre: 10, post: 10 },
+  { code: "HS10", w: [1,3,4,4,4,6], pre: 1, post: 6 },
+  { code: "HS11", w: [1,2,3,3,3,5], pre: 1, post: 5 },
+  { code: "HS12", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS13", w: [10,10,10,8,8,9], pre: 10, post: 9 },
+  { code: "HS14", w: [1,3,5,5,5,6], pre: 1, post: 6 },
+  { code: "HS15", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS16", w: [1,3,4,5,5,6], pre: 1, post: 6 },
+  { code: "HS17", w: [2,5,6,7,6,8], pre: 2, post: 8 },
+  { code: "HS18", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS19", w: [6,6,6,5,7,7], pre: 6, post: 7 },
+  { code: "HS20", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS21", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS22", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS23", w: [2,3,3,5,5,6], pre: 2, post: 6 },
+  { code: "HS24", w: [6,7,7,8,7,8], pre: 6, post: 8 },
+  { code: "HS25", w: [4,5,7,7,8,9], pre: 4, post: 9 },
+  { code: "HS26", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS27", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS28", w: [10,10,10,10,10,10], pre: 10, post: 10 },
+  { code: "HS29", w: [8,8,8,8,8,10], pre: 8, post: 10 },
+  { code: "HS30", w: [10,10,10,10,10,10], pre: 10, post: 10 }
+];
+
+// Tính toán
+DATA.forEach(s => { s.diff = s.post - s.pre; });
+const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+const weekAvgs = [0,1,2,3,4,5].map(i => avg(DATA.map(s => s.w[i])));
+const preAvg = avg(DATA.map(s => s.pre));
+const postAvg = avg(DATA.map(s => s.post));
+const up = DATA.filter(s => s.diff > 0).length;
+const flat = DATA.filter(s => s.diff === 0).length;
+const down = DATA.filter(s => s.diff < 0).length;
+const full = DATA.filter(s => s.post === 10).length;
+const low = DATA.filter(s => s.pre < 5).length;
+const fmt = n => n.toFixed(1).replace(".", ",");
+
+// Thẻ tóm tắt
+document.getElementById("cards").innerHTML = [
+  ["Trung bình trước khảo sát", fmt(preAvg) + "/10"],
+  ["Trung bình sau khảo sát", fmt(postAvg) + "/10"],
+  ["Học sinh tiến bộ", up + "/" + DATA.length],
+  ["Đạt 10/10 sau khảo sát", full + "/" + DATA.length]
+].map(([l, v]) => `<div class="card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
+
+// Biểu đồ cột theo tuần
+const maxW = 10;
+document.getElementById("weekChart").innerHTML = weekAvgs.map((v, i) => {
+  const h = (v / maxW) * 100;
+  return `<div class="col">
+    <div class="bar ${i === 5 ? "strong" : ""}" style="height:${h}%"><span>${fmt(v)}</span></div>
+    <div class="name">Tuần ${i + 1}</div>
+  </div>`;
+}).join("") + `<div class="col">
+    <div class="bar strong" style="height:${(postAvg / maxW) * 100}%"><span>${fmt(postAvg)}</span></div>
+    <div class="name">Sau KS</div>
+  </div>`;
+
+// Bảng
+let sortKey = "code", sortDir = 1;
+function rowClass(d) { return d > 0 ? "up" : d < 0 ? "down" : "flat"; }
+function renderTable() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const f = document.getElementById("filter").value;
+  let list = DATA.filter(s => s.code.toLowerCase().includes(q));
+  if (f === "up") list = list.filter(s => s.diff > 0);
+  if (f === "flat") list = list.filter(s => s.diff === 0);
+  if (f === "down") list = list.filter(s => s.diff < 0);
+  if (f === "low") list = list.filter(s => s.pre < 5);
+  const val = s => {
+    if (sortKey === "code") return s.code;
+    if (sortKey === "pre") return s.pre;
+    if (sortKey === "post") return s.post;
+    if (sortKey === "diff") return s.diff;
+    return s.w[parseInt(sortKey.slice(1)) - 1];
+  };
+  list.sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sortDir);
+  document.getElementById("tbody").innerHTML = list.map(s => `<tr>
+    <td>${s.code}</td>
+    ${s.w.map(x => `<td>${x}</td>`).join("")}
+    <td>${s.pre}</td><td>${s.post}</td>
+    <td class="${rowClass(s.diff)}">${s.diff > 0 ? "+" + s.diff : s.diff}</td>
+  </tr>`).join("") || `<tr><td colspan="10">Không có học sinh phù hợp.</td></tr>`;
+}
+document.getElementById("search").addEventListener("input", renderTable);
+document.getElementById("filter").addEventListener("change", renderTable);
+document.querySelectorAll("th[data-key]").forEach(th => {
+  th.addEventListener("click", () => {
+    const k = th.dataset.key;
+    sortDir = sortKey === k ? -sortDir : 1;
+    sortKey = k;
+    renderTable();
+  });
+});
+renderTable();
+
+// Nhận xét chi tiết
+const pick = document.getElementById("pick");
+pick.innerHTML = DATA.map(s => `<option value="${s.code}">${s.code}</option>`).join("");
+function note(s, i) {
+  const cur = s.w[i];
+  const prev = i === 0 ? null : s.w[i - 1];
+  let cmp;
+  if (prev === null) cmp = "";
+  else if (cur > prev) cmp = `, tăng ${cur - prev} điểm so với tuần ${i}`;
+  else if (cur < prev) cmp = `, giảm ${prev - cur} điểm so với tuần ${i}`;
+  else cmp = `, giữ nguyên so với tuần ${i}`;
+  const tail = cur === 10
+    ? "Con đã làm đúng 10/10 từ trong lượt này."
+    : "Cô và con cùng xem lại các từ chưa phân loại đúng nhé.";
+  return `<p class="note"><b>Tuần ${i + 1}:</b> đạt ${cur}/10 điểm${cmp}. ${tail}</p>`;
+}
+function renderDetail() {
+  const s = DATA.find(x => x.code === pick.value);
+  const cls = rowClass(s.diff);
+  const diffTxt = s.diff > 0 ? `tăng ${s.diff} điểm` : s.diff < 0 ? `giảm ${-s.diff} điểm` : "giữ nguyên";
+  document.getElementById("detail").innerHTML = `
+    <p class="note"><b>${s.code}</b> · Trước khảo sát: ${s.pre}/10 · Sau khảo sát: ${s.post}/10 · <span class="${cls}">${diffTxt}</span></p>
+    ${s.w.map((_, i) => note(s, i)).join("")}`;
+}
+pick.addEventListener("change", renderDetail);
+renderDetail();
+</script>
+</body>
+</html>
